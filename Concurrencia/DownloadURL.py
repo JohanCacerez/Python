@@ -85,3 +85,38 @@ print("Descarga con Pool finalizada.")
 
 print("Descargados: ", len(results))
 '''
+
+import asyncio
+import aiohttp
+
+semaphore = asyncio.Semaphore(10)  # Limitar el número de conexiones concurrentes
+
+results = []
+
+# Función para obtener el contenido de la URL
+async def fetch_url(session, url):
+    async with session.get(url) as response:
+        return await response.text()
+    
+# Función worker para manejar la descarga con semáforo
+async def worker(session, url):
+    async with semaphore:
+        content = await fetch_url(session, url)
+        results.append((url, content))
+
+async def main():
+    # Crear una sesión aiohttp para reutilizar conexiones
+    async with aiohttp.ClientSession() as session:
+        # Crear tareas para cada URL
+        tasks = []
+        # Iniciar las descargas
+        for url in urls:
+            print(f"Iniciando descarga de {url} con asyncio + aiohttp")
+            tasks.append(asyncio.create_task(worker(session,url)))
+            # Esperar a que todas las tareas terminen
+        await asyncio.gather(*tasks)
+
+# Ejecutar el bucle de eventos
+asyncio.run(main())
+print("Descarga con asyncio + aiohttp finalizada.")
+print("Descargados: ", len(results))
